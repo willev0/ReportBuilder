@@ -1,10 +1,13 @@
-streamlit>=1.38,<2
-pandas>=2.2
-numpy>=1.26
-openpyxl>=3.1
-reportlab>=4.2
-pypdf>=4.2
-Pillow>=10.3
-python-dateutil>=2.9
-tomli>=2.0 ; python_version < "3.11"
+streamlit==1.38.0
+pandas==2.2.2
+openpyxl==3.1.5
+numpy==1.26.4
+python-dateutil==2.9.0.post0
+reportlab==4.2.2
+pypdf==6.1.1
+Pillow==10.4.0
 svgwrite==1.4.3
+cairosvg==2.7.1
+cairocffi==1.7.1
+cffi==1.17.1
+tomli>=2.0.1; python_version < "3.11"
