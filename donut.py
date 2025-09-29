@@ -9,35 +9,36 @@ import os
 import re
 import shutil
 from typing import Dict, Iterable, List, Tuple
-
 import pandas as pd
 import svgwrite
-
+from pathlib import Path
 try:
     import tomllib  # py3.11+
 except Exception:
     import tomli as tomllib  # type: ignore
 
-EXCEL_PATH = "InvestorDataTest.xlsx"   # adjust if needed
-CHART_DIR  = "charts"                  # output folder for chart images (SVG + PNG)
+# --- anchor everything to this file's folder ---
+HERE = Path(__file__).parent
 
-# =======================
-# Config + name mapping
-# =======================
-def _norm(s: str) -> str:
-    return re.sub(r"\s+", " ", str(s).strip().lower())
-
-def _load_cfg(path: str = "Configs/config.toml") -> dict:
-    if os.path.exists(path):
-        with open(path, "rb") as f:
+def _load_cfg(path: str | None = None) -> dict:
+    cfg_path = HERE / "Configs" / "config.toml"
+    if cfg_path.exists():
+        with open(cfg_path, "rb") as f:
             return tomllib.load(f)
     return {}
 
 _CFG = _load_cfg()
 
-# Use the same font names your PDF code registers
+# Read defaults from config, but keep sane fallbacks
+EXCEL_PATH = str(HERE / _CFG.get("paths", {}).get("excel", "InvestorDataTest.xlsx"))
+CHART_DIR  = str(HERE / _CFG.get("paths", {}).get("donut_dir", "charts"))
+
+# Use the same font names your PDF code registers (names only; svgwrite will embed as text)
 FONT_BOLD_NAME = _CFG.get("fonts", {}).get("bold_name",  "HKGrotesk-Bold")
 FONT_MED_NAME  = _CFG.get("fonts", {}).get("medium_name","HKGrotesk-Medium")
+
+def _norm(s: str) -> str:
+    return re.sub(r"\s+", " ", str(s).strip().lower())
 
 def _config_name_maps(cfg: dict):
     """
@@ -467,8 +468,7 @@ def generate_investor_donuts_from_excel(
     square: bool = True,
     square_size: int = 900,
 ):
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir, exist_ok=True)
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
 
     df = pd.read_excel(excel_path, sheet_name=sheet_name)
     df = df[[investor_col, fund_col, amount_col]].copy().dropna(subset=[investor_col, fund_col, amount_col])

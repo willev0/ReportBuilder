@@ -19,8 +19,9 @@ from pypdf import PdfReader, PdfWriter
 
 # ========= load config (static brand + paths only) =========
 def _load_cfg() -> dict:
-    cfg_path = "Configs/config.toml"
-    if os.path.exists(cfg_path):
+    here = Path(__file__).parent
+    cfg_path = here / "Configs" / "config.toml"
+    if cfg_path.exists():
         with open(cfg_path, "rb") as f:
             return tomllib.load(f)
     return {}
@@ -28,14 +29,16 @@ def _load_cfg() -> dict:
 _cfg = _load_cfg()
 
 # ========= CONFIG (from config.toml, with sane defaults) =========
-EXCEL_PATH   = _cfg.get("paths", {}).get("excel", "InvestorDataTest.xlsx")
-TEMPLATE_PDF = _cfg.get("paths", {}).get("cover_template_pdf", "CoverPageTemplate.pdf")
-OUTPUT_DIR   = _cfg.get("paths", {}).get("out_cover", "CoverPages")
+HERE = Path(__file__).parent
 
-FONT_BOLD_NAME = _cfg.get("fonts", {}).get("bold_name",   "HKGrotesk-Bold")
+EXCEL_PATH   = str(HERE / _cfg.get("paths", {}).get("excel", "InvestorDataTest.xlsx"))
+TEMPLATE_PDF = str(HERE / _cfg.get("paths", {}).get("cover_template_pdf", "Configs/CoverPageTemplate.pdf"))
+OUTPUT_DIR   = str(HERE / _cfg.get("paths", {}).get("out_cover", "CoverPages"))
+
+FONT_BOLD_NAME = _cfg.get("fonts", {}).get("bold_name", "HKGrotesk-Bold")
 FONT_MED_NAME  = _cfg.get("fonts", {}).get("medium_name", "HKGrotesk-Medium")
-FONT_BOLD_PATH = _cfg.get("fonts", {}).get("bold_path",   "hk-grotesk.bold.ttf")
-FONT_MED_PATH  = _cfg.get("fonts", {}).get("medium_path", "hk-grotesk.medium.ttf")
+FONT_BOLD_PATH = str(HERE / _cfg.get("fonts", {}).get("bold_path", "Configs/hk-grotesk.bold.ttf"))
+FONT_MED_PATH  = str(HERE / _cfg.get("fonts", {}).get("medium_path", "Configs/hk-grotesk.medium.ttf"))
 
 ACCENT_GRN = HexColor(_cfg.get("brand", {}).get("accent", "#A9D6B9"))
 

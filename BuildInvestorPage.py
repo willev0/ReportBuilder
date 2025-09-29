@@ -21,29 +21,35 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from pathlib import Path
 
 # =======================
 # CONFIG
 # =======================
-def _load_cfg(path: str = "Configs/config.toml") -> dict:
-    if os.path.exists(path):
-        with open(path, "rb") as f:
+HERE = Path(__file__).parent
+
+def _load_cfg(path: str | None = None) -> dict:
+    # look for config.toml in Configs/ relative to this file
+    cfg_path = HERE / "Configs" / "config.toml"
+    if cfg_path.exists():
+        with open(cfg_path, "rb") as f:
             return tomllib.load(f)
     return {}
+
 _cfg = _load_cfg()
 
 # -------- Paths (match your config keys) --------
-EXCEL_PATH   = _cfg.get("paths", {}).get("excel", "InvestorDataTest.xlsx")
-OUTPUT_DIR   = _cfg.get("paths", {}).get("out_consolidated", "2ConsolidatedStatementPage")
-DONUT_DIR    = _cfg.get("paths", {}).get("donut_dir", "charts")  # SAME folder the consolidated builder uses
+EXCEL_PATH   = str(HERE / _cfg.get("paths", {}).get("excel", "InvestorDataTest.xlsx"))
+OUTPUT_DIR   = str(HERE / _cfg.get("paths", {}).get("out_consolidated", "2ConsolidatedStatementPage"))
+DONUT_DIR    = str(HERE / _cfg.get("paths", {}).get("donut_dir", "charts"))  # SAME folder the consolidated builder uses
 
 # -------- Fonts --------
 FONT_BOLD_NAME = _cfg.get("fonts", {}).get("bold_name", "HKGrotesk-Bold")
-FONT_MED_NAME  = _cfg.get("fonts", {}).get("medium_name","HKGrotesk-Medium")
-FONT_BOLD_PATH = _cfg.get("fonts", {}).get("bold_path", "hk-grotesk.bold.ttf")
-FONT_MED_PATH  = _cfg.get("fonts", {}).get("medium_path","hk-grotesk.medium.ttf")
-FONT_BOLD_CANDIDATES = [FONT_BOLD_PATH, "./hk-grotesk.bold.ttf"]
-FONT_MED_CANDIDATES  = [FONT_MED_PATH,  "./hk-grotesk.medium.ttf"]
+FONT_MED_NAME  = _cfg.get("fonts", {}).get("medium_name", "HKGrotesk-Medium")
+FONT_BOLD_PATH = str(HERE / _cfg.get("fonts", {}).get("bold_path", "Configs/hk-grotesk.bold.ttf"))
+FONT_MED_PATH  = str(HERE / _cfg.get("fonts", {}).get("medium_path", "Configs/hk-grotesk.medium.ttf"))
+FONT_BOLD_CANDIDATES = [FONT_BOLD_PATH, str(HERE / "hk-grotesk.bold.ttf")]
+FONT_MED_CANDIDATES  = [FONT_MED_PATH,  str(HERE / "hk-grotesk.medium.ttf")]
 
 # -------- Brand/colors --------
 NAVY         = colors.HexColor(_cfg.get("brand", {}).get("navy",   "#2A3652"))
@@ -62,7 +68,7 @@ PILL_BG  = colors.HexColor((_cfg.get("brand", {}).get("pill_bg") or _cfg.get("br
 PILL_TXT = colors.white
 
 # -------- Reporting --------
-YIELD_IS_ANNUAL = bool(_cfg.get("reporting", {}).get("yield_is_annual", False))
+YIELD_IS_ANNUAL = False
 
 # -------- Page geometry (POINTS; 72pt = 1in) --------
 PAGE_WIDTH_PT = 612  # Letter width (8.5in * 72)
