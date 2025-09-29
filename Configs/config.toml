@@ -1,0 +1,79 @@
+
+
+[paths]
+# IMPORTANT: The Link Pages script will use these as-is.
+# Option 1 (simple): Name your Excel exactly "source.xlsx" and put it next to this config.
+excel                 = "InvestorDataTest.xlsx"
+cover_template_pdf    = "Configs/CoverPageTemplate.pdf"
+
+# Output folders (relative to this config’s folder)
+out_cover             = "CoverPages"
+out_consolidated      = "2ConsolidatedStatementPage"
+out_link              = "4LinkPage"
+out_individual        = "3IdividualInvestmentsPage"
+out_final             = "FinalInvestorReports"
+
+# Optional chart subfolders used by your scripts
+donut_dir             = "charts"
+bar_dir               = "bars"
+
+[fonts]
+# HK Grotesk files you ship with the repo.
+bold_name   = "HKGrotesk-Bold"
+bold_path   = "Configs/hk-grotesk.bold.ttf"
+medium_name = "HKGrotesk-Medium"
+medium_path = "Configs/hk-grotesk.medium.ttf"
+
+[brand]
+navy          = "#2A3652"   # top band + footer text color
+accent        = "#A7C9B4"   # thin line accent
+header_bg     = "#54607A"   # table header background
+row_bg        = "#C7DCE9"   # table body background
+label_bg      = "#B4D1BE"   # first-column background
+text          = "#FFFFFF"
+company_label = "ESSENTIA CAPITAL"
+
+[reporting]
+yield_is_annual = false
+round_dollars   = 0
+
+# Funds that the Link Pages step will stitch in order
+[[funds]]
+key = "10FSSAC3"
+name = "10 Federal Fund 3"
+abbr = "Fund 3"
+cover_name = "10 Federal Self Storage Acquisition Co 3"
+pdf_path = "10FSSAC3_Q2'25.pdf"
+url = "https://drive.google.com/file/d/1T5XwTqmlAGYiKEowaoItqpmfb4oZKJdE/view?usp=drive_link"
+
+
+[[funds]]
+key = "10FSSAC4"
+name = "10 Federal Fund 4"
+abbr = "Fund 4"
+cover_name = "10 Federal Self Storage Acquisition Co 4"
+pdf_path = "10FSSAC4_Q2'25.pdf"
+url = "https://drive.google.com/file/d/1WQKss9HfE7LpKCLJTQ4EzzeBwPRoq4NX/view?usp=drive_link"
+
+[[funds]]
+key = "10FSSAC5"
+name = "10 Federal Fund 5"
+abbr = "Fund 5"
+cover_name = "10 Federal Self Storage Acquisition Co 5"
+pdf_path = "10FSSAC5_Q2'25.pdf"
+
+[[funds]]
+key = "10FSSOC1"
+name = "10 Federal OppCo 1"
+abbr = "OppCo 1"
+cover_name = "10 Federal Opportunistic Co 1"
+pdf_path = "10FSSOC1_Q2'25.pdf"
+url = "https://drive.google.com/file/d/1MXeXaFqABHvmem_e9GQzfLp_xhifidDH/view?usp=drive_link"
+
+[[funds]]
+key = "BuligoIF"
+name = "Buligo Industrial Fund"
+abbr = "Industrial Fund"
+cover_name = "Buligo Industrial Fund"
+pdf_path = "BuligoIF_Q2'25.pdf"
+url = "https://drive.google.com/file/d/1nujfVRaL1rwXW2au8ItZufkcUHwhCfA0/view?usp=drive_link"
