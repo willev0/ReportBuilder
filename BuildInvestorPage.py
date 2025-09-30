@@ -406,7 +406,7 @@ def _coalesce_funddata(fund_df: pd.DataFrame) -> pd.DataFrame:
     yld  = _find_col(cols, "annualized yield", "annualized yield (%)", "yield", "irr", "annual yield")
     nav  = _find_col(cols, "nav", "nav ($)", "current nav", "value", "ending nav")
     teq  = _find_col(cols, "total equity raised", "equity raised", "total equity")
-    link = _find_col(cols, "report link", "fund report link", "report url", "report", "link", "fund report")
+    link = _find_col(cols, "drive link", "report link", "report url", "report", "link", "fund report")
     asof = _find_col(cols, "as of", "as-of", "as of date", "valuation date", "report date", "date")
     qtr  = _find_col(cols, "quarter", "qtr")
     df = df.rename(columns={k:v for k,v in {
@@ -667,8 +667,7 @@ def _load_data(excel_path: str) -> pd.DataFrame:
     # URL overlay + display name
     if "Report Link" not in merged.columns: merged["Report Link"] = ""
     def _overlay_url(row):
-        cur = str(row.get("Report Link","") or "").strip()
-        return cur if cur and cur.lower() not in ("nan","none") else _url_for_investment_name(row.get("Investment Name",""), _cfg)
+        return str(row.get("Report Link","") or "").strip()
     merged["Report Link"] = merged.apply(_overlay_url, axis=1).astype(str)
     merged["Report Link"] = merged["Report Link"].apply(lambda u: u if u and u.lower() not in ("nan","none") else "")
     merged["Display Name"] = merged["Investment Name"].apply(lambda v: _display_name_for(v, _cfg))

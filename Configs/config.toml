@@ -3,7 +3,7 @@
 [paths]
 # IMPORTANT: The Link Pages script will use these as-is.
 # Option 1 (simple): Name your Excel exactly "source.xlsx" and put it next to this config.
-excel                 = "InvestorDataTest.xlsx"
+excel                 = "InvestorDataTestQ2.xlsx"
 cover_template_pdf    = "Configs/CoverPageTemplate.pdf"
 
 # Output folders (relative to this config’s folder)
