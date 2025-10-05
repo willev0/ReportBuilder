@@ -99,6 +99,10 @@ QUARTER_X_OFF     = -26
 # =======================
 KPI_VALUE_FS  = 22
 KPI_LABEL_FS  = 10
+SECOND_ROW_VALUE_FS = KPI_VALUE_FS - 2
+ROW_SEPARATOR_Y_OFFSET = 18   # pixels below the top KPI values
+ROW_SEPARATOR_THICK    = 1
+
 
 KPI_COL_GAP   = -190
 KPI_ROW_GAP   = 20
@@ -922,38 +926,62 @@ def draw_top_band(c: canvas.Canvas, page_h: float, font_bold: str, font_med: str
     c.drawString(LEFT_MARGIN, page_h - TOP_BAND_H + TITLE_L2_Y_OFF, "STATEMENT")
 
 def draw_kpis_in_band(c: canvas.Canvas, page_h: float, font_bold: str, font_med: str,
-                      nav_total: float, qtd_total: float, ann_yld_text: str,
+                      invested_total: float, nav_total: float, qtd_total: float, ann_yld_text: str,
                       ltd_total: float, asof_q: int, asof_year: int):
-    # Compute left/right column x inside content area
+
+    # geometry
     content_w = PAGE_WIDTH_PT - LEFT_MARGIN - RIGHT_MARGIN
-    col_w = (content_w - KPI_COL_GAP) / 2.0
-    x_left  = LEFT_MARGIN
-    x_right = LEFT_MARGIN + col_w + KPI_COL_GAP
-
-    # band-relative rows
     band_bottom = page_h - TOP_BAND_H
-    y_row1  = band_bottom + KPI_ROW1_FROM_BAND_BOTTOM
-    y_row2  = band_bottom + KPI_ROW2_FROM_BAND_BOTTOM
 
-    values = [
-        (_fmt_money_full(nav_total), f"NAV as of Q{asof_q} {asof_year}"),
-        (_fmt_money_full(qtd_total), "Distributed this Quarter"),
-        (ann_yld_text or "",         f"Annualized Yield: Q{asof_q} {asof_year}"),
-        (_fmt_money_full(ltd_total), "Total Distributions to Date"),
+    # y positions
+    y_top    = band_bottom + KPI_ROW1_FROM_BAND_BOTTOM
+    y_bottom = band_bottom + KPI_ROW2_FROM_BAND_BOTTOM
+
+    # x positions: 3 columns for top row
+    top_col_w = content_w / 3.0
+    x_top = [LEFT_MARGIN + i * top_col_w for i in range(3)]
+
+    # x positions: 2 columns for bottom row
+    bot_col_w = content_w / 2.0
+    x_bottom = [LEFT_MARGIN, LEFT_MARGIN + bot_col_w]
+
+    # TOP ROW (matches screenshot order)
+    top_vals = [
+        (_fmt_money_full(invested_total), "Total Capital Invested"),
+        (_fmt_money_full(ltd_total),      "Distributed To Date"),
+        (_fmt_money_full(nav_total),      "Current NAV"),
     ]
-    positions = [(x_left, y_row1), (x_right, y_row1), (x_left, y_row2), (x_right, y_row2)]
 
-    # draw each pair: value in accent, label in white
-    for (val, lab), (x, y) in zip(values, positions):
-        # value
+    # draw top row
+    for (val, lab), x in zip(top_vals, x_top):
         c.setFillColor(NUM_COLOR)
-        c.setFont(font_bold, KPI_VALUE_FS)
-        c.drawString(x, y, val)
+        c.setFont(font_bold, KPI_VALUE_FS)   # big numbers
+        c.drawString(x, y_top, val)
 
-        # label
-        c.setFillColor(colors.white)
+        c.setFillColor(WHITE)
+        c.setFont(font_med, KPI_LABEL_FS)    # labels
+        c.drawString(x, y_top - 18, lab)
+
+    # SEPARATOR between rows
+    c.setStrokeColor(ACCENT_COLOR)
+    c.setLineWidth(ROW_SEPARATOR_THICK)
+    c.line(LEFT_MARGIN, y_top - ROW_SEPARATOR_Y_OFFSET, LEFT_MARGIN + content_w, y_top - ROW_SEPARATOR_Y_OFFSET)
+
+    # BOTTOM ROW (left: Annualized %, right: Distributed This Quarter)
+    bottom_vals = [
+        (ann_yld_text or "",              f"Annualized Yield: Q{asof_q} {asof_year}"),
+        (_fmt_money_full(qtd_total),      "Distributed This Quarter"),
+    ]
+
+    for (val, lab), x in zip(bottom_vals, x_bottom):
+        c.setFillColor(NUM_COLOR)
+        c.setFont(font_bold, KPI_VALUE_FS)     # can reduce 1–2 pts if you want
+        c.drawString(x, y_bottom, val)
+
+        c.setFillColor(WHITE)
         c.setFont(font_med, KPI_LABEL_FS)
-        c.drawString(x, y - 20, lab)
+        c.drawString(x, y_bottom - 18, lab)
+
 
 def draw_donut_png_in_band(c: canvas.Canvas, page_h: float, donut_png_path: str,
                            total_capital_invested: float, font_bold: str, font_med: str):
@@ -1146,7 +1174,10 @@ def generate_consolidated_pages(excel_path: str, output_dir: str):
 
         # Band + KPIs (anchored to band)
         draw_top_band(c, page_h, font_bold, font_med, quarter_text)
-        draw_kpis_in_band(c, page_h, font_bold, font_med, nav_total, qtd_total, ann_yld_text, ltd_total, asof_q, asof_year)
+        draw_kpis_in_band(
+            c, page_h, font_bold, font_med,
+            invested, nav_total, qtd_total, ann_yld_text, ltd_total, asof_q, asof_year
+        )
 
         # Donut (anchored to band top + page right) + centered Total Capital Invested
         draw_donut_png_in_band(
