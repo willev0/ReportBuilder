@@ -97,15 +97,12 @@ QUARTER_X_OFF     = -26
 # =======================
 # KPI ANCHORS (band-relative; SAME labels/meaning as consolidated builder)
 # =======================
-KPI_VALUE_FS  = 22
-KPI_LABEL_FS  = 10
+KPI_VALUE_FS  = 24
+KPI_LABEL_FS  = 11
 SECOND_ROW_VALUE_FS = KPI_VALUE_FS - 2
 ROW_SEPARATOR_Y_OFFSET = 18   # pixels below the top KPI values
-ROW_SEPARATOR_THICK    = 1
 
-
-KPI_COL_GAP   = -190
-KPI_ROW_GAP   = 20
+KPI_ROW_GAP   = 28
 
 # baselines are distances UP from band bottom
 KPI_ROW1_FROM_BAND_BOTTOM = 130
@@ -937,50 +934,85 @@ def draw_kpis_in_band(c: canvas.Canvas, page_h: float, font_bold: str, font_med:
     y_top    = band_bottom + KPI_ROW1_FROM_BAND_BOTTOM
     y_bottom = band_bottom + KPI_ROW2_FROM_BAND_BOTTOM
 
-    # x positions: 3 columns for top row
-    top_col_w = content_w / 3.0
-    x_top = [LEFT_MARGIN + i * top_col_w for i in range(3)]
+    # x positions: 3 columns for top row (yours)
+    x_top = [LEFT_MARGIN - 40,
+             LEFT_MARGIN + 80,
+             LEFT_MARGIN + 180
+    ]
 
-    # x positions: 2 columns for bottom row
-    bot_col_w = content_w / 2.0
-    x_bottom = [LEFT_MARGIN, LEFT_MARGIN + bot_col_w]
+    # x positions: 2 columns for bottom row (yours)
+    x_bottom = [LEFT_MARGIN + 15,
+                LEFT_MARGIN + 125
+    ]
+
+    # ---- per-column tunables (local) ----
+    # adjust these numbers per column to control wrap width independently
+    top_col_w     = [120, 70, 70]  # [Invested, Distributed to Date, NAV]
+    bottom_col_w  = [100, 90]       # [Annualized, Distributed This Quarter]
+    label_inset   = 12               # same inset for all; make a list if you want per-col insets too
+    val_to_lab_gap = 18
+    label_leading  = KPI_LABEL_FS + 2
 
     # TOP ROW (matches screenshot order)
     top_vals = [
-        (_fmt_money_full(invested_total), "Total Capital Invested"),
-        (_fmt_money_full(ltd_total),      "Distributed To Date"),
-        (_fmt_money_full(nav_total),      "Current NAV"),
+        (_fmt_money_abbr_pretty(invested_total), "Total Capital Invested"),
+        (_fmt_money_abbr_pretty(ltd_total),      "Distributed To Date"),
+        (_fmt_money_abbr_pretty(nav_total),      "Current NAV"),
     ]
 
-    # draw top row
-    for (val, lab), x in zip(top_vals, x_top):
+    # draw top row (centered values + wrapped/centered labels)
+    for (val, lab), x, col_w in zip(top_vals, x_top, top_col_w):
+        center_x = x + (col_w / 2.0)
+        label_max_w = max(0.0, col_w - 2 * label_inset)
+
         c.setFillColor(NUM_COLOR)
-        c.setFont(font_bold, KPI_VALUE_FS)   # big numbers
-        c.drawString(x, y_top, val)
+        c.setFont(font_bold, KPI_VALUE_FS)
+        c.drawCentredString(center_x, y_top, val)
 
-        c.setFillColor(WHITE)
-        c.setFont(font_med, KPI_LABEL_FS)    # labels
-        c.drawString(x, y_top - 18, lab)
+        c.setFillColor(colors.white)
+        c.setFont(font_med, KPI_LABEL_FS)
+        lines = simpleSplit(lab, font_med, KPI_LABEL_FS, label_max_w)
+        y = y_top - val_to_lab_gap
+        for ln in lines:
+            c.drawCentredString(center_x, y, ln)
+            y -= label_leading
 
-    # SEPARATOR between rows
-    c.setStrokeColor(ACCENT_COLOR)
-    c.setLineWidth(ROW_SEPARATOR_THICK)
-    c.line(LEFT_MARGIN, y_top - ROW_SEPARATOR_Y_OFFSET, LEFT_MARGIN + content_w, y_top - ROW_SEPARATOR_Y_OFFSET)
+    # separator
+    c.setStrokeColor(ACCENT_GRN)
+    c.setLineWidth(ACCENT_LINE_THICK)
+    line_inset_left  = -10
+    line_inset_right = 260
+    line_y = y_top - ROW_SEPARATOR_Y_OFFSET - 28
 
-    # BOTTOM ROW (left: Annualized %, right: Distributed This Quarter)
+    c.line(
+        LEFT_MARGIN + line_inset_left,
+        line_y,
+        LEFT_MARGIN + content_w - line_inset_right,
+        line_y
+    )
+    # bottom values (define before loop)
     bottom_vals = [
         (ann_yld_text or "",              f"Annualized Yield: Q{asof_q} {asof_year}"),
         (_fmt_money_full(qtd_total),      "Distributed This Quarter"),
     ]
 
-    for (val, lab), x in zip(bottom_vals, x_bottom):
-        c.setFillColor(NUM_COLOR)
-        c.setFont(font_bold, KPI_VALUE_FS)     # can reduce 1–2 pts if you want
-        c.drawString(x, y_bottom, val)
+    # draw bottom row (centered values + wrapped/centered labels)
+    for (val, lab), x, col_w in zip(bottom_vals, x_bottom, bottom_col_w):
+        center_x = x + (col_w / 2.0)
+        label_max_w = max(0.0, col_w - 2 * label_inset)
 
-        c.setFillColor(WHITE)
+        c.setFillColor(NUM_COLOR)
+        c.setFont(font_bold, SECOND_ROW_VALUE_FS)  # or KPI_VALUE_FS if you want same size
+        c.drawCentredString(center_x, y_bottom, val)
+
+        c.setFillColor(colors.white)
         c.setFont(font_med, KPI_LABEL_FS)
-        c.drawString(x, y_bottom - 18, lab)
+        lines = simpleSplit(lab, font_med, KPI_LABEL_FS, label_max_w)
+        y = y_bottom - val_to_lab_gap
+        for ln in lines:
+            c.drawCentredString(center_x, y, ln)
+            y -= label_leading
+
 
 
 def draw_donut_png_in_band(c: canvas.Canvas, page_h: float, donut_png_path: str,

@@ -178,10 +178,32 @@ def _estimate_text_block(top: str, bottom: str, fs_top: float, fs_bottom: float,
     height = fs_top + line_gap + fs_bottom
     return width, height
 
-def _fits(x: float, y: float, w: float, h: float, width: float, height_: float, margin: float) -> bool:
-    """Does a w×h block centered at (x,y) fit within [margin, width-margin] × [margin, height_-margin]?"""
-    return (x - w/2 >= margin and x + w/2 <= width - margin and
-            y - h/2 >= margin and y + h/2 <= height_ - margin)
+def _fits(x: float, y: float, w: float, h: float,
+          width: float, height_: float, margin: float,
+          avoid_rects: list[tuple] | None = None,
+          avoid_pad: float = 6.0) -> bool:
+    # canvas margins
+    if not (x - w/2 >= margin and x + w/2 <= width - margin and
+            y - h/2 >= margin and y + h/2 <= height_ - margin):
+        return False
+
+    # avoid rectangles (each rect can be (x,y,w,h) or (x,y,w,h,pad))
+    if avoid_rects:
+        lx, ly = x - w/2, y - h/2
+        for rect in avoid_rects:
+            if len(rect) == 5:
+                rx, ry, rw, rh, pad = rect
+            else:
+                rx, ry, rw, rh = rect
+                pad = avoid_pad
+            ax, ay = rx - pad, ry - pad
+            aw, ah = rw + 2*pad, rh + 2*pad
+            # overlap test
+            if not (lx + w <= ax or ax + aw <= lx or ly + h <= ay or ay + ah <= ly):
+                return False
+    return True
+
+
 
 def _adjust_angle_to_fit(
     angle_deg: float,
@@ -191,37 +213,121 @@ def _adjust_angle_to_fit(
     block_w: float, block_h: float,
     width: float, height_: float,
     margin: float,
-    max_iter: int = 120,
+    avoid_rects: List[Tuple[float,float,float,float]] | None = None,
+    avoid_pad: float = 6.0,
+    max_iter: int = 120,   # kept for signature
 ) -> tuple[float, float]:
     """
-    Nudge the label angle away from edges until the whole block fits.
-    If that isn't enough, increase the radial offset a bit.
-    Returns (angle_deg, offset).
+    Minimal rotation only when overlapping an avoid box,
+    plus right-side page-cutoff correction (restores old behavior).
     """
-    step = 2.0  # degrees per iteration
-    offset = float(base_offset)
     a = angle_deg % 360.0
+    off = float(base_offset)
+    R = outer_radius
+    MIN_OFF = 24.0
+    MAX_OFF = base_offset + 80.0
 
-    for _ in range(max_iter):
-        rad = math.radians(a)
-        x = cx + (outer_radius + offset) * math.cos(rad)
-        y = cy + (outer_radius + offset) * math.sin(rad)
+    def xy(angle, off_):
+        r = math.radians(angle)
+        return (
+            cx + (R + off_) * math.cos(r),
+            cy + (R + off_) * math.sin(r),
+            r,
+        )
 
-        if _fits(x, y, block_w, block_h, width, height_, margin):
-            return a, offset
+    def overlaps_avoid_at(x, y):
+        if not avoid_rects:
+            return False
+        lx, ly = x - block_w/2, y - block_h/2
+        for rect in avoid_rects:
+            if len(rect) == 5:
+                rx, ry, rw, rh, pad = rect
+            else:
+                rx, ry, rw, rh = rect
+                pad = avoid_pad
+            ax, ay = rx - pad, ry - pad
+            aw, ah = rw + 2*pad, rh + 2*pad
+            if not (lx + block_w <= ax or ax + aw <= lx or ly + block_h <= ay or ay + ah <= ly):
+                return True
+        return False
 
-        # If clipping horizontally, rotate toward top/bottom (more room)
-        if x + block_w/2 > width - margin or x - block_w/2 < margin:
-            a += step if math.sin(rad) > 0 else -step
-        # If clipping vertically, rotate toward right/left (more room)
-        elif y - block_h/2 < margin or y + block_h/2 > height_ - margin:
-            a += step if math.cos(rad) > 0 else -step
-        else:
-            # Still not fitting? push outward slightly
-            offset += 1.5
+    # ---- 1) centered position
+    x0, y0, rad0 = xy(a, off)
+    if not overlaps_avoid_at(x0, y0):
+        c, s = math.cos(rad0), math.sin(rad0)
 
-    # Fallback: final outward push
-    return a, offset + 6.0
+        # --- RIGHT-SIDE page-cutoff rotation (old behavior) ---
+        if c > 0 and (x0 + block_w/2) > (width - margin):
+            step = 1.0
+            for _ in range(40):  # up to ±20°
+                a += step if s > 0 else -step
+                xt, yt, _ = xy(a, off)
+                if (xt + block_w/2) <= (width - margin):
+                    break
+            x0, y0, rad0 = xy(a, off)
+            c, s = math.cos(rad0), math.sin(rad0)
+
+        # --- analytic minimal outward radius (same as your current good code) ---
+        deltas = []
+        if (x0 + block_w/2) > (width - margin) and c > 0:
+            target = (width - margin - block_w/2 - cx) / c
+            deltas.append(max(0.0, target - (R + off)))
+        if (x0 - block_w/2) < margin and c < 0:
+            target = (margin + block_w/2 - cx) / c
+            deltas.append(max(0.0, target - (R + off)))
+        if (y0 + block_h/2) > (height_ - margin) and s > 0:
+            target = (height_ - margin - block_h/2 - cy) / s
+            deltas.append(max(0.0, target - (R + off)))
+        if (y0 - block_h/2) < margin and s < 0:
+            target = (margin + block_h/2 - cy) / s
+            deltas.append(max(0.0, target - (R + off)))
+        if deltas:
+            dr = max(deltas)
+            if dr > 0:
+                off = min(MAX_OFF, max(MIN_OFF, off + dr))
+        return a, off
+
+    # ---- 2) overlap with avoid box → minimal rotation to clear, then margin tidy-up ----
+    step = 0.5
+    max_search = 30.0
+    best_a = a
+    found = False
+    for delta in (d*step for d in range(1, int(max_search/step) + 1)):
+        for sign in (+1, -1):
+            ta = (a + sign*delta) % 360.0
+            xt, yt, _ = xy(ta, off)
+            if not overlaps_avoid_at(xt, yt):
+                best_a = ta
+                found = True
+                break
+        if found:
+            break
+
+    xb, yb, rb = xy(best_a, off)
+    cb, sb = math.cos(rb), math.sin(rb)
+    deltas = []
+    if (xb + block_w/2) > (width - margin) and cb > 0:
+        target = (width - margin - block_w/2 - cx) / cb
+        deltas.append(max(0.0, target - (R + off)))
+    if (xb - block_w/2) < margin and cb < 0:
+        target = (margin + block_w/2 - cx) / cb
+        deltas.append(max(0.0, target - (R + off)))
+    if (yb + block_h/2) > (height_ - margin) and sb > 0:
+        target = (height_ - margin - block_h/2 - cy) / sb
+        deltas.append(max(0.0, target - (R + off)))
+    if (yb - block_h/2) < margin and sb < 0:
+        target = (margin + block_h/2 - cy) / sb
+        deltas.append(max(0.0, target - (R + off)))
+    if deltas:
+        dr = max(deltas)
+        if dr > 0:
+            off = min(MAX_OFF, max(MIN_OFF, off + dr))
+
+    return best_a, off
+
+
+
+
 
 # =======================
 # Renderers
@@ -322,6 +428,7 @@ def donut_svg_square(
     name_font_size: int = 20,
     pct_font_size: int = 18,
     label_offset_px: int | None = 35,  # base offset before adaptive tweaks
+    debug_avoid: bool = False,
 ):
     width = height = int(size)
     cx, cy = width / 2, height / 2
@@ -338,6 +445,28 @@ def donut_svg_square(
 
     dwg = svgwrite.Drawing(svg_path, size=(width, height), profile="full")
     dwg.attribs["viewBox"] = f"0 0 {width} {height}"
+
+    avoid_rects = [
+    (-220, 420, 300, 60),        # box 1 (uses default avoid_pad)
+    (-270, 430, 330, 180),   # box 2 with custom pad (optional 5th value)
+    (-170, 135, 390, 60),
+    ]
+    avoid_pad = 10.0
+
+    # Draw every box (visible red) and its padded avoid area (pink)
+    if debug_avoid:
+        for rect in avoid_rects:
+            if len(rect) == 5:
+                rx, ry, rw, rh, pad = rect
+            else:
+                rx, ry, rw, rh = rect
+                pad = avoid_pad
+            dwg.add(dwg.rect(insert=(rx, ry), size=(rw, rh),
+                            fill="none", stroke="#ff5c5c", stroke_dasharray="6,4"))
+            dwg.add(dwg.rect(insert=(rx - pad, ry - pad),
+                            size=(rw + 2*pad, rh + 2*pad),
+                            fill="#ffb3b3", opacity=0.25, stroke="none"))
+
 
     values = [float(v) for v in data.values()]
     total = sum(values) or 1.0
@@ -377,6 +506,8 @@ def donut_svg_square(
             block_w=block_w, block_h=block_h,
             width=width, height_=height,
             margin=margin,
+            avoid_rects=avoid_rects,
+            avoid_pad=avoid_pad,
         )
 
         rad = math.radians(adj_deg)
@@ -411,7 +542,7 @@ def _stable_color_cycle(n: int) -> Iterable[str]:
         "#7d87a4",  # dark grey
         "#c4dce8",  # grey
         "#ffffff",  # white
-        "#E78AC3",  # muted pink
+        "#2E8BC0",  # deep sky blue
     ]
     if n <= len(base):
         return base[:n]
