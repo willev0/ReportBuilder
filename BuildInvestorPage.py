@@ -76,7 +76,7 @@ PAGE_WIDTH_PT = 612  # Letter width (8.5in * 72)
 # MARGINS — point style
 LEFT_MARGIN   = 54   # 0.75in
 RIGHT_MARGIN  = 54   # 0.75in
-BOTTOM_MARGIN = 46   # 0.50in
+BOTTOM_MARGIN = 72   # 0.50in
 
 # =======================
 # TOP BAND (POINT-BASED; same semantics preserved)
@@ -1080,6 +1080,47 @@ def draw_donut_png_in_band(c: canvas.Canvas, page_h: float, donut_png_path: str,
         c.drawString(cx - tw/2.0, y, line)
         y -= DONUT_TEXT_LEADING_LAB
 
+def draw_nav_disclaimer(
+    c: canvas.Canvas,
+    page_h: float,
+    font_med: str,
+    *,
+    x_pt: float = None,              # ← absolute x coordinate (left edge of block)
+    y_pt: float = None,              # ← absolute y coordinate (optional)
+    table_bottom_y: float | None = None,  # optional: anchor relative to table
+    gap_from_table_pt: float = 12,   # distance below table (smaller = closer)
+    right_block_width_pt: float = 260,
+):
+    """
+    Draw small disclaimer text at a fixed x/y position (no alignment logic).
+    If y_pt is omitted, it will be placed a bit above the footer or just below the table.
+    """
+
+    disclaimer = (
+        "* NAV shown represents the investor’s pro-rata share of each fund’s latest reported Net Asset Value"
+    )
+
+    fs = 10
+    footer_baseline = max(10, int(BOTTOM_MARGIN * 0.45))
+
+    # Compute vertical placement
+    if y_pt is not None:
+        y = y_pt
+    elif table_bottom_y is not None:
+        y = table_bottom_y - gap_from_table_pt
+    else:
+        y = footer_baseline + 16  # default above footer if no table anchor
+
+    # Default horizontal position if not provided
+    if x_pt is None:
+        x_pt = PAGE_WIDTH_PT - RIGHT_MARGIN - right_block_width_pt  # same as right-aligned default
+
+    # Draw
+    c.setFillColor(NAVY)
+    c.setFont(font_med, fs)
+    c.drawString(x_pt, y, disclaimer)
+
+
 
 def draw_footer_brand(c: canvas.Canvas, page_h: float, font_med: str):
     c.setFillColor(NAVY)
@@ -1229,12 +1270,23 @@ def generate_consolidated_pages(excel_path: str, output_dir: str):
         x_center = (PAGE_WIDTH_PT - tw) / 2.0
         c.drawString(x_center, y_table_top + 25, table_title)
 
-        # Table (anchored just below the band)
+        # Table
         _, th = tbl.wrapOn(c, content_w, 1)
         tbl.drawOn(c, LEFT_MARGIN, y_table_top - th)
 
-        # Footer
+        table_bottom_y = y_table_top - th
+
+        # Disclaimer — explicit X position
+        draw_nav_disclaimer(
+            c, page_h, font_med,
+            table_bottom_y=table_bottom_y,
+            gap_from_table_pt=18,
+            x_pt=LEFT_MARGIN + 20  # ← move left/right by adjusting this
+        )
+
         draw_footer_brand(c, page_h, font_med)
+
+
 
         c.showPage(); c.save()
         print(f"[ok] {out_path}")
