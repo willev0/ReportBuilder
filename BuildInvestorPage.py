@@ -1016,7 +1016,7 @@ def draw_kpis_in_band(c: canvas.Canvas, page_h: float, font_bold: str, font_med:
 
 
 def draw_donut_png_in_band(c: canvas.Canvas, page_h: float, donut_png_path: str,
-                           total_capital_invested: float, font_bold: str, font_med: str):
+                           total_capital_invested: float, font_bold: str, font_med: str, show_center_text: bool = False,):
     """SAME METHOD as consolidated builder: fit PNG within a fixed box anchored to band top + page right.
        Adds centered Total Capital Invested text inside the donut."""
     from PIL import Image
@@ -1037,6 +1037,9 @@ def draw_donut_png_in_band(c: canvas.Canvas, page_h: float, donut_png_path: str,
 
     # draw donut image
     c.drawImage(ImageReader(img), x_left, y_bottom, width=w, height=h, mask='auto')
+
+    if not show_center_text:
+        return
 
         # centered value + label (wrapped)
     cx = x_left + w/2.0
