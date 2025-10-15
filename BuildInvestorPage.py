@@ -201,6 +201,7 @@ def _fmt_pct_clean(v):
     except:
         return str(v)
 
+    v = round(v, 2)
     if v.is_integer():          # whole number like 5.0
         return f"{int(v)}%"
     elif (v * 10).is_integer(): # one decimal place is enough, e.g. 4.5
