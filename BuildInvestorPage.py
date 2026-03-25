@@ -38,7 +38,7 @@ def _load_cfg(path: str | None = None) -> dict:
 
 _cfg = _load_cfg()
 
-# -------- Paths (match your config keys) --------
+# -------- Paths  --------
 EXCEL_PATH   = str(HERE / _cfg.get("paths", {}).get("excel", "InvestorDataTest.xlsx"))
 OUTPUT_DIR   = str(HERE / _cfg.get("paths", {}).get("out_consolidated", "2ConsolidatedStatementPage"))
 DONUT_DIR    = str(HERE / _cfg.get("paths", {}).get("donut_dir", "charts"))  # SAME folder the consolidated builder uses
