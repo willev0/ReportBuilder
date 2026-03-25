@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 """
-Streamlit UI for the new, simplified report generation flow.
-Now there are ONLY two builder scripts, both driven by config.toml:
-  1) build_cover_pages.py       → outputs to [paths.out_cover]
-  2) BuildInvestorPage.py       → outputs to [paths.out_consolidated] (per‑investor pages)
 
-This app lets you upload the Excel, run those two builders, and merge a final
-per‑investor PDF (Cover → InvestorPage). It also creates an all‑in‑one
-InvestorReports.pdf and a ZIP of all finals.
 """
 from __future__ import annotations
 import io
